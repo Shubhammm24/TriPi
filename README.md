@@ -1,91 +1,110 @@
-# AI Travel Planner
+# TriPi — Agentic AI Travel Planner
 
-An intelligent travel planning assistant that helps users create personalized travel itineraries using AI. The application uses the Google Gemini API and Langchain to provide smart, context-aware travel recommendations and detailed itineraries.
+TriPi has evolved from a basic Streamlit script into a **modern, full-stack agentic web application**. Powered by LangGraph, Google Gemini, and real-time APIs, it autonomous fetches live data to craft highly personalized day-by-day travel itineraries.
 
-## Features
+![TriPi Itinerary Planner](https://img.shields.io/badge/Status-Active-success)
 
-- Interactive travel preference collection
-- Personalized itinerary generation
-- Real-time itinerary refinement
-- Support for various travel preferences:
-  - Budget considerations
-  - Dietary restrictions
-  - Mobility requirements
-  - Activity interests
-  - Accommodation preferences
+## 🚀 Key Features
 
-## Setup
+*   **Autonomous Agent Architecture:** Built on LangGraph, the AI agent dynamically decides which tools to call based on your travel preferences.
+*   **Real-time Data Integrations:**
+    *   **Google Flights (via SerpApi):** Live flight schedules, airlines, and pricing.
+    *   **Open-Meteo:** Live weather forecasting for your travel dates.
+    *   **ExchangeRate-API:** Real-time budget conversion into local currency.
+    *   **DuckDuckGo Web Search:** Fallback search for current events, train schedules, and live web data.
+    *   **REST Countries & Overpass:** Destination insights, local laws, and top POIs.
+*   **Knowledge Base (RAG):** Built-in ChromaDB vector store containing curated travel guides (safety, packing, budget tips).
+*   **Interactive Refinement:** Chat directly with the agent to swap out restaurants, change plans, or ask for details using conversational memory.
+*   **Premium UI/UX:** A stunning "Hyper-Spectral" design system built with Next.js, Framer Motion, and Glassmorphism (dark/light themes).
 
-1. Clone the repository:
+---
 
-```bash
-git clone <repository-url>
-cd travel-planner
+## 🛠️ Technology Stack
+
+*   **Frontend:** Next.js (React), Framer Motion, Vanilla CSS (Glassmorphism design tokens)
+*   **Backend:** FastAPI (Python), Uvicorn
+*   **AI & Agents:** LangGraph, LangChain, Google Gemini 3.5 Flash
+*   **Vector DB:** ChromaDB
+
+---
+
+## ⚙️ Local Setup
+
+### 1. Prerequisites
+*   Node.js (v18+)
+*   Python (3.10+)
+
+### 2. Clone & Environment Variables
+Clone the repository and create a `.env` file in the root directory:
+
+```env
+# Required
+GOOGLE_API_KEY=your_google_gemini_api_key
+
+# Optional (for live flight search)
+SERPAPI_API_KEY=your_serpapi_key
+
+# Optional (for Amadeus Hotels/Flights if preferred)
+AMADEUS_API_KEY=your_amadeus_api_key
+AMADEUS_API_SECRET=your_amadeus_api_secret
 ```
 
-2. Create a virtual environment and activate it:
+### 3. Backend Setup (FastAPI)
+Open a terminal in the root directory:
 
 ```bash
+# Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+venv\Scripts\activate  # On Mac/Linux: source venv/bin/activate
 
-3. Install dependencies:
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# (Optional) Seed the RAG vector store
+python -m rag.ingest
+
+# Run the server
+python -m uvicorn main:app --reload --port 8000
 ```
+*The backend API will run at `http://localhost:8000`*
 
-4. Set up your environment variables:
-   - Copy `.env.example` to `.env`
-   - Add your Google Gemini API key to the `.env` file:
-
-```
-GOOGLE_API_KEY=your_api_key_here
-```
-
-## Running the Application
-
-1. Start the Streamlit app:
+### 4. Frontend Setup (Next.js)
+Open a **new** terminal in the `frontend` directory:
 
 ```bash
-streamlit run app.py
+cd frontend
+
+# Install dependencies
+npm install
+
+# Run the development server
+npm run dev
 ```
+*The UI will run at `http://localhost:3000`*
 
-2. Open your browser and navigate to the URL shown in the terminal (typically http://localhost:8501)
+---
 
-## Usage
+## 🗺️ Project Structure
 
-1. Fill in your travel preferences:
-
-   - Budget
-   - Travel dates
-   - Destination
-   - Interests and preferences
-   - Dietary requirements
-   - Mobility needs
-   - Accommodation preferences
-
-2. Click "Generate Itinerary" to create your personalized travel plan
-
-3. Review the generated itinerary
-
-4. Provide feedback to refine the itinerary if needed
-
-## Project Structure
-
-```
+```text
 .
-├── README.md
-├── requirements.txt
-├── .env.example
-├── .env
-├── app.py
-└── utils/
-    └── travel_agent.py
+├── agent/              # LangGraph ReAct agent & system prompts
+├── frontend/           # Next.js web application
+│   ├── src/app/        # Pages (Landing, Plan) & Global CSS
+│   └── public/         # Static assets
+├── rag/                # ChromaDB vector store & markdown knowledge docs
+├── tools/              # Agent tools (flights, weather, search, etc.)
+├── main.py             # FastAPI server entry point
+├── requirements.txt    # Python dependencies
+└── .env                # API keys
 ```
 
-## Contributing
+## 🤝 Contributing
 
-Feel free to submit issues and enhancement requests!
+Contributions, issues, and feature requests are welcome!
 
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request

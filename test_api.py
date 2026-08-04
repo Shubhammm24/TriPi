@@ -1,32 +1,33 @@
-import os
-from dotenv import load_dotenv
-import google.generativeai as genai
+"""Quick test script for the TriPi API."""
+import httpx
+import json
 
-def test_gemini_api():
-    # Load environment variables
-    load_dotenv()
-    
-    # Get API key
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        print("Error: GOOGLE_API_KEY not found in .env file")
-        return
-    
-    try:
-        # Configure the API
-        genai.configure(api_key=api_key)
-        
-        # Initialize the model
-        model = genai.GenerativeModel('gemini-3.5-flash')
-        
-        # Test generation
-        response = model.generate_content("Say hello!")
-        
-        print("API Test successful!")
-        print("Response:", response.text)
-        
-    except Exception as e:
-        print("Error testing API:", str(e))
+url = "http://localhost:8000/api/generate"
+body = {
+    "destination": "Goa",
+    "origin": "Bhopal",
+    "start_date": "2026-08-08",
+    "end_date": "2026-08-10",
+    "budget": "20000",
+    "duration": 2,
+    "purpose": "Leisure",
+    "interests": ["Food"],
+}
 
-if __name__ == "__main__":
-    test_gemini_api() 
+print("Sending request to", url)
+print("Body:", json.dumps(body, indent=2))
+print("-" * 60)
+
+try:
+    resp = httpx.post(url, json=body, timeout=120)
+    print(f"Status: {resp.status_code}")
+    data = resp.json()
+    print(f"Session: {data.get('session_id', 'N/A')}")
+    print(f"Tools: {data.get('tool_calls', [])}")
+    print(f"Error: {data.get('error', 'None')}")
+    print(f"Itinerary length: {len(data.get('itinerary', ''))}")
+    print("-" * 60)
+    itinerary = data.get("itinerary", "EMPTY")
+    print(itinerary[:1000] if itinerary else "EMPTY RESPONSE")
+except Exception as e:
+    print(f"Request failed: {e}")
