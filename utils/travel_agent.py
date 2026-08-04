@@ -1,14 +1,12 @@
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import google.generativeai as genai
 from pydantic import BaseModel
-import requests
 import json
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationChain
-from langchain.prompts import PromptTemplate
+from langchain_classic.memory import ConversationBufferMemory
+from langchain_classic.chains import ConversationChain
 
 class TravelPreferences(BaseModel):
     budget: str
@@ -29,22 +27,34 @@ class TravelPreferences(BaseModel):
 
 class TravelAgent:
     def __init__(self, api_key: str):
-        
         genai.configure(api_key=api_key)
-        
+
         generation_config = {
             "temperature": 0.9,
             "top_p": 1,
             "top_k": 1,
-            "max_output_tokens": 2048,
+            "max_output_tokens": 8192,
             "response_mime_type": "text/plain",
         }
 
-        # Initialize model (use a stable, widely available Gemini model id)
+        # Initialize Gemini model for direct generation
         self.model = genai.GenerativeModel(
-        "gemini-2.0-flash",
-        generation_config=generation_config
-)
+            "gemini-3.5-flash",
+            generation_config=generation_config
+        )
+
+        # Initialize LangChain conversation chain for iterative refinement
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-3.5-flash",
+            google_api_key=api_key,
+            temperature=0.7,
+        )
+        self.memory = ConversationBufferMemory()
+        self.conversation = ConversationChain(
+            llm=llm,
+            memory=self.memory,
+            verbose=False,
+        )
 
         
     def _response_to_text(self, response) -> str:
@@ -174,7 +184,7 @@ class TravelAgent:
                 else:
                     raise
             return destination_data
-        except:
+        except Exception:
           
             return {
                 "attractions": [
@@ -202,44 +212,7 @@ class TravelAgent:
                     "Seasonal Activity"
                 ]
             }
-    def _create_daily_schedule(self, preferences: TravelPreferences, day_num: int, 
-                                 attractions: List[str], restaurants: List[str]) -> str:
-        """Create a structured schedule for a single day."""
-        morning_prompt = f"""Create a detailed morning schedule for day {day_num} in {preferences.destination},
-        considering the following preferences:
-        - Walking tolerance: {preferences.walking_tolerance}
-        - Dietary preferences: {', '.join(preferences.dietary_preferences or ['No restrictions'])}
-        - Available attractions: {', '.join(attractions[:3] if attractions else ['No attractions'])}
-        - Breakfast options: {', '.join(restaurants[:2] if restaurants else ['No restaurants'])}
-        """
-    
-        afternoon_prompt = """Create an afternoon schedule that includes:
-        - Lunch recommendations
-        - Main attractions or activities
-        - Rest periods
-        - Alternative indoor options in case of bad weather"""
-    
-        evening_prompt = """Plan an evening that includes:
-        - Dinner recommendations
-        - Evening activities or entertainment
-        - Transportation back to accommodation"""
-    
-            
-            
-        morning = self._generate_plain_text(morning_prompt)
-        afternoon = self._generate_plain_text(afternoon_prompt)
-        evening = self._generate_plain_text(evening_prompt)
-            
-        return f"""Day {day_num}:
-    
-    Morning:
-    {morning}
-    
-    Afternoon:
-    {afternoon}
-    
-    Evening:
-    {evening}"""
+
     def generate_itinerary(self, preferences: TravelPreferences, feedback: str = "") -> str:
         """Generate a complete, personalized travel itinerary."""
         try:
@@ -333,58 +306,4 @@ class TravelAgent:
         except Exception as e:
             return f"Sorry, I couldn't refine the itinerary right now: {str(e)}"
 
-    def gather_preferences(self, user_input: str) -> Dict:
-        """Gather and refine user preferences through conversation."""
-        initial_prompt = self._create_initial_prompt()
-        resp_text = self._generate_plain_text(f"{initial_prompt}\n\nUser: {user_input}")
-        preferences = self._parse_preferences(resp_text)
-        
-       
-        if preferences.get('needs_clarification'):
-            clarification_prompt = self._create_clarification_prompt(preferences)
-            clarification_text = self._generate_plain_text(clarification_prompt)
-            preferences.update(self._parse_preferences(clarification_text))
-        
-        return preferences
 
-    def _create_clarification_prompt(self, preferences: Dict) -> str:
-        """Create prompts for clarifying unclear preferences."""
-        clarification_needed = []
-        
-        if not preferences.get('dietary_preferences'):
-            clarification_needed.append("Could you tell me about any dietary preferences or restrictions?")
-        
-        if not preferences.get('walking_tolerance'):
-            clarification_needed.append("How comfortable are you with walking during the day?")
-        
-        if not preferences.get('specific_interests'):
-            clarification_needed.append("What specific activities or experiences interest you the most?")
-        
-        return "\n".join(clarification_needed)
-
-    def _parse_preferences(self, response: str) -> Dict:
-        """Parse the AI response into structured preferences."""
-        try:
-            
-            parse_prompt = f"""Extract key travel preferences from this conversation:
-            {response}
-            
-            Format the response as a JSON with these keys:
-            - dietary_preferences (list)
-            - walking_tolerance (string)
-            - specific_interests (list)
-            - needs_clarification (boolean)
-            """
-            
-            parse_text = self._generate_plain_text(parse_prompt)
-            parse_text = self._strip_code_fences(parse_text)
-            preferences = json.loads(parse_text)
-            return preferences
-        except:
-            
-            return {
-                "needs_clarification": True,
-                "dietary_preferences": [],
-                "walking_tolerance": None,
-                "specific_interests": []
-            } 

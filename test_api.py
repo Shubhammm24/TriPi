@@ -17,7 +17,7 @@ def test_gemini_api():
         genai.configure(api_key=api_key)
         
         # Initialize the model
-        model = genai.GenerativeModel('gemini-1.5-pro')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         
         # Test generation
         response = model.generate_content("Say hello!")

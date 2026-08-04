@@ -23,6 +23,8 @@ wheels/
 
 # Virtual Environment
 venv/
+.venv/
+.agents/
 ENV/
 
 # Environment Variables

@@ -267,7 +267,7 @@ The daily schedule prompts were split into morning, afternoon, and evening segme
 ## 4. Live Application
 
 The AI Travel Planner is hosted on Streamlit Cloud and can be accessed at:
-[https://travel-agent-dhruvsaringit.streamlit.app](https://travelagent1.streamlit.app/)
+[https://travelagent1.streamlit.app](https://travelagent1.streamlit.app/)
 
 ### Features:
 
