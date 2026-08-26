@@ -152,16 +152,61 @@ export default function PlanPage() {
     }
   };
 
+  // Poll for async task result from Django + Celery backend
+  const pollForResult = async (taskId: string, sid: string) => {
+    const POLL_INTERVAL = 2000;
+    const MAX_POLLS = 90; // 3 minutes max
+    let polls = 0;
+
+    while (polls < MAX_POLLS) {
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+      polls++;
+
+      try {
+        const res = await fetch(`${API_URL}/api/tasks/${taskId}/`);
+        if (!res.ok) continue;
+
+        const task = await res.json();
+
+        if (task.status === "completed" && task.result) {
+          setSessionId(sid);
+          setItinerary(task.result.itinerary || "No itinerary was generated. Please try again.");
+          setToolCalls(task.result.tool_calls || []);
+          setStage("result");
+          setActiveTab("itinerary");
+
+          if (task.result.itinerary) {
+            extractStructuredData(task.result.itinerary);
+          }
+          return;
+        }
+
+        if (task.status === "failed") {
+          setItinerary(task.result?.itinerary || `## ⚠️ Agent Error\n\n${task.error || "Unknown error"}`);
+          setStage("result");
+          return;
+        }
+
+        // Still pending/running — update loading tools animation
+        if (polls === 2) setLoadingTools(t => [...t, "📍 Finding attractions…"]);
+        if (polls === 4) setLoadingTools(t => [...t, "💰 Converting currency…"]);
+        if (polls === 6) setLoadingTools(t => [...t, "🔍 Searching the web…"]);
+        if (polls === 8) setLoadingTools(t => [...t, "📚 Checking knowledge base…"]);
+        if (polls === 12) setLoadingTools(t => [...t, "✨ Crafting your itinerary…"]);
+      } catch {
+        // Network error — keep polling
+      }
+    }
+
+    setItinerary("## ⚠️ Timeout\n\nThe agent took too long to respond. Please try again.");
+    setStage("result");
+  };
+
   const handleSubmit = async () => {
     if (!form.destination || !form.origin || !form.startDate || !form.endDate || !form.budget) return;
 
     setStage("loading");
     setLoadingTools(["🌤️ Checking weather…", "🌍 Looking up destination…"]);
-
-    const timer1 = setTimeout(() => setLoadingTools(t => [...t, "📍 Finding attractions…"]), 2000);
-    const timer2 = setTimeout(() => setLoadingTools(t => [...t, "💰 Converting currency…"]), 3500);
-    const timer3 = setTimeout(() => setLoadingTools(t => [...t, "🔍 Searching the web…"]), 5000);
-    const timer4 = setTimeout(() => setLoadingTools(t => [...t, "📚 Checking knowledge base…"]), 6500);
 
     try {
       const res = await fetch(`${API_URL}/api/generate`, {
@@ -189,30 +234,18 @@ export default function PlanPage() {
 
       if (!res.ok) {
         const errText = await res.text();
-        setItinerary(`## ⚠️ Backend Error (${res.status})\n\n${errText}\n\nMake sure the FastAPI server is running:\n\`\`\`\nuvicorn main:app --reload --port 8000\n\`\`\``);
+        setItinerary(`## ⚠️ Backend Error (${res.status})\n\n${errText}\n\nMake sure the Django server is running:\n\`\`\`\ncd backend && python manage.py runserver 0.0.0.0:8000\n\`\`\``);
         setStage("result");
         return;
       }
 
       const data = await res.json();
-      setSessionId(data.session_id || "");
-      setItinerary(data.itinerary || "No itinerary was generated. Please try again.");
-      setToolCalls(data.tool_calls || []);
-      setStage("result");
-      setActiveTab("itinerary");
-
-      // Extract structured data for Map / Budget / Photos (non-blocking)
-      if (data.itinerary) {
-        extractStructuredData(data.itinerary);
-      }
+      // Backend returns {session_id, task_id, status: "pending"}
+      // Poll for the result asynchronously
+      await pollForResult(data.task_id, data.session_id);
     } catch (err) {
-      setItinerary(`## ⚠️ Connection Error\n\nCould not connect to the backend at \`${API_URL}\`.\n\nMake sure the FastAPI server is running:\n\`\`\`\ncd d:\\Projects\\Travel_Agent-main\npython -m uvicorn main:app --reload --port 8000\n\`\`\``);
+      setItinerary(`## ⚠️ Connection Error\n\nCould not connect to the backend at \`${API_URL}\`.\n\nMake sure the Django server is running:\n\`\`\`\ncd backend && python manage.py runserver 0.0.0.0:8000\n\`\`\``);
       setStage("result");
-    } finally {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
     }
   };
 
@@ -227,13 +260,41 @@ export default function PlanPage() {
         body: JSON.stringify({ session_id: sessionId, feedback }),
       });
       const data = await res.json();
-      setItinerary(data.itinerary);
-      setToolCalls(data.tool_calls || []);
-      setFeedback("");
 
-      // Re-extract structured data after refinement
-      if (data.itinerary) {
-        extractStructuredData(data.itinerary);
+      // Backend returns {session_id, task_id, status: "pending"}
+      // Poll for the refined result
+      const POLL_INTERVAL = 2000;
+      const MAX_POLLS = 60;
+      let polls = 0;
+
+      while (polls < MAX_POLLS) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+        polls++;
+
+        try {
+          const taskRes = await fetch(`${API_URL}/api/tasks/${data.task_id}/`);
+          if (!taskRes.ok) continue;
+
+          const task = await taskRes.json();
+
+          if (task.status === "completed" && task.result) {
+            setItinerary(task.result.itinerary || "No changes were made.");
+            setToolCalls(task.result.tool_calls || []);
+            setFeedback("");
+
+            if (task.result.itinerary) {
+              extractStructuredData(task.result.itinerary);
+            }
+            break;
+          }
+
+          if (task.status === "failed") {
+            setItinerary(task.result?.itinerary || `## ⚠️ Refinement Error\n\n${task.error || "Unknown error"}`);
+            break;
+          }
+        } catch {
+          // Network error — keep polling
+        }
       }
     } catch {
       // Silently handle

@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>An autonomous, tool-calling AI agent that plans hyper-personalized travel itineraries using live data.</strong><br/>
-  Built with <b>LangGraph</b> · <b>Google Gemini</b> · <b>FastAPI</b> · <b>Next.js</b>
+  Built with <b>LangGraph</b> · <b>Google Gemini</b> · <b>Django + DRF</b> · <b>Celery + Redis</b> · <b>PostgreSQL</b> · <b>Next.js</b>
 </p>
 
 <p align="center">
@@ -66,31 +66,35 @@ TriPi is not a simple chatbot — it's a **fully autonomous agentic AI system** 
                                │  REST API (JSON)
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        BACKEND (FastAPI)                           │
+│                   BACKEND (Django + DRF + Celery)                   │
 │                                                                     │
-│  POST /api/generate   ─── Create new itinerary from preferences     │
-│  POST /api/refine     ─── Refine existing itinerary with feedback   │
-│  POST /api/chat       ─── Free-form conversation with agent         │
-│  GET  /health         ─── Health check                              │
+│  POST /api/generate   ─── Returns 202 + task_id (async via Celery) │
+│  POST /api/refine     ─── Returns 202 + task_id (async via Celery) │
+│  POST /api/chat       ─── Returns 202 + task_id (async via Celery) │
+│  GET  /api/tasks/{id} ─── Poll for task completion                 │
+│  POST /api/auth/*     ─── JWT register / login / refresh           │
+│  GET  /api/sessions/* ─── User's trip history                      │
+│  GET  /health         ─── Health check                             │
 │                                                                     │
-│  Session Manager (in-memory) ──► maps session_id → thread_id        │
+│  PostgreSQL ──► Session, TripPreferences, Itinerary, Message, Task │
+│  Redis ──► Celery broker + result backend                          │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
-                               ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                  LANGGRAPH ReAct AGENT (Gemini 3.5 Flash)          │
-│                                                                     │
-│   System Prompt ──► Tool Selection Loop ──► Synthesize Itinerary   │
-│                                                                     │
-│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐             │
-│   │ Weather  │ │ Flights  │ │  Places  │ │ Currency │             │
-│   └──────────┘ └──────────┘ └──────────┘ └──────────┘             │
-│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐             │
-│   │  Hotels  │ │  Search  │ │  Destn.  │ │   RAG    │             │
-│   └──────────┘ └──────────┘ └──────────┘ └──────────┘             │
-│                                                                     │
-│   MemorySaver (conversation memory across refinements)              │
-└─────────────────────────────────────────────────────────────────────┘
+                   ┌───────────┴───────────┐
+                   ▼                       ▼
+┌─────────────────────────┐  ┌──────────────────────────────────┐
+│    CELERY WORKER        │  │  LANGGRAPH ReAct AGENT           │
+│                         │  │  (Gemini 3.5 Flash)              │
+│  Receives task_id ──────┼──►                                  │
+│  Runs agent in bg       │  │  System Prompt ──► Tool Loop     │
+│  Updates DB on finish   │  │  ──► Synthesize Itinerary        │
+│  Records duration,      │  │                                  │
+│  tools used, tokens     │  │  8 Tools: Weather, Flights,      │
+│                         │  │  Hotels, Places, Currency,       │
+│  Stuck task recovery    │  │  Destination, Search, RAG        │
+│  via periodic check     │  │                                  │
+└─────────────────────────┘  │  MemorySaver (conversation mem)  │
+                              └──────────────────────────────────┘
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -101,6 +105,20 @@ TriPi is not a simple chatbot — it's a **fully autonomous agentic AI system** 
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### Why Django + Celery over FastAPI?
+
+FastAPI's async model lets you handle many I/O-bound requests concurrently, but
+TriPi's agent runs are **CPU-bound + 30-60 seconds long**. With 4 Uvicorn workers,
+4 concurrent agent requests would exhaust the entire pool. Django + Celery solves
+this by separating concerns: Django handles fast HTTP in/out (< 200ms), while Celery
+workers run the agent in a separate process pool that scales independently.
+
+Additionally, Django provides:
+- **ORM + Migrations**: Type-safe schema evolution across the team.
+- **Admin site**: Free data inspection dashboard at `/admin/`.
+- **Auth + Permissions**: Built-in user model, JWT, object-level permissions.
+- **Ecosystem**: django-debug-toolbar, pytest-django, 20+ years of battle-tested middleware.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -109,12 +127,14 @@ TriPi is not a simple chatbot — it's a **fully autonomous agentic AI system** 
 | Technology | Purpose |
 |---|---|
 | **Python 3.10+** | Core runtime |
-| **FastAPI + Uvicorn** | Async REST API server |
+| **Django 6.x + DRF** | REST API server with ORM, admin, and auth |
+| **Celery + Redis** | Background task processing for 30-60s agent runs |
+| **PostgreSQL** | Persistent storage for sessions, itineraries, messages |
 | **LangGraph** | ReAct agent orchestration with built-in tool loop |
 | **LangChain** | LLM abstractions, tool definitions, memory management |
 | **Google Gemini 3.5 Flash** | Large Language Model powering reasoning & generation |
 | **ChromaDB** | Vector database for RAG knowledge retrieval |
-| **Pydantic v2** | Request/response validation & agent state schema |
+| **SimpleJWT** | Token-based authentication for the Next.js frontend |
 
 ### Frontend
 | Technology | Purpose |
