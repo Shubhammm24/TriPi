@@ -2,14 +2,26 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import Navbar from "@/app/components/Navbar";
 import ReactMarkdown from "react-markdown";
+import BudgetTracker from "@/app/components/BudgetTracker";
+import PhotoPreview from "@/app/components/PhotoPreview";
+import PdfExport from "@/app/components/PdfExport";
+
+// Dynamically import map to avoid SSR issues with Leaflet
+const ItineraryMap = dynamic(() => import("@/app/components/ItineraryMap"), {
+  ssr: false,
+  loading: () => <div className="skeleton" style={{ height: 500, borderRadius: "var(--radius-lg)" }} />,
+});
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+const EASE_CURVE = [0.4, 0, 0.2, 1] as const;
+
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [...EASE_CURVE] as [number, number, number, number] } },
 };
 
 const interestOptions = [
@@ -42,7 +54,43 @@ interface FormData {
   hiddenGems: boolean;
 }
 
+interface PlaceData {
+  name: string;
+  lat: number;
+  lon: number;
+  day: number;
+  time: string;
+  category: string;
+  cost: number;
+  cost_usd: number;
+  currency: string;
+  description: string;
+}
+
+interface BudgetBreakdown {
+  accommodation: number;
+  food: number;
+  activities: number;
+  transport: number;
+  miscellaneous: number;
+}
+
+interface BudgetSummary {
+  total_estimated: number;
+  user_budget: number;
+  currency: string;
+  breakdown: BudgetBreakdown;
+}
+
 type Stage = "form" | "loading" | "result";
+type ResultTab = "itinerary" | "map" | "budget" | "photos";
+
+const TAB_CONFIG: { key: ResultTab; icon: string; label: string }[] = [
+  { key: "itinerary", icon: "📋", label: "Itinerary" },
+  { key: "map", icon: "🗺️", label: "Map" },
+  { key: "budget", icon: "💰", label: "Budget" },
+  { key: "photos", icon: "📸", label: "Photos" },
+];
 
 export default function PlanPage() {
   const [stage, setStage] = useState<Stage>("form");
@@ -52,6 +100,12 @@ export default function PlanPage() {
   const [feedback, setFeedback] = useState("");
   const [refining, setRefining] = useState(false);
   const [loadingTools, setLoadingTools] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<ResultTab>("itinerary");
+
+  // Structured data for Map / Budget / Photos
+  const [places, setPlaces] = useState<PlaceData[]>([]);
+  const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null);
+  const [extracting, setExtracting] = useState(false);
 
   const [form, setForm] = useState<FormData>({
     destination: "",
@@ -71,6 +125,32 @@ export default function PlanPage() {
 
   const toggleChip = (arr: string[], val: string): string[] =>
     arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
+
+  // Extract structured data from itinerary markdown
+  const extractStructuredData = async (itineraryText: string) => {
+    setExtracting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/extract-places`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itinerary: itineraryText,
+          destination: form.destination,
+          budget: form.budget,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPlaces(data.places || []);
+        setBudgetSummary(data.budget_summary || null);
+      }
+    } catch (err) {
+      console.error("Failed to extract structured data:", err);
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!form.destination || !form.origin || !form.startDate || !form.endDate || !form.budget) return;
@@ -119,6 +199,12 @@ export default function PlanPage() {
       setItinerary(data.itinerary || "No itinerary was generated. Please try again.");
       setToolCalls(data.tool_calls || []);
       setStage("result");
+      setActiveTab("itinerary");
+
+      // Extract structured data for Map / Budget / Photos (non-blocking)
+      if (data.itinerary) {
+        extractStructuredData(data.itinerary);
+      }
     } catch (err) {
       setItinerary(`## ⚠️ Connection Error\n\nCould not connect to the backend at \`${API_URL}\`.\n\nMake sure the FastAPI server is running:\n\`\`\`\ncd d:\\Projects\\Travel_Agent-main\npython -m uvicorn main:app --reload --port 8000\n\`\`\``);
       setStage("result");
@@ -144,6 +230,11 @@ export default function PlanPage() {
       setItinerary(data.itinerary);
       setToolCalls(data.tool_calls || []);
       setFeedback("");
+
+      // Re-extract structured data after refinement
+      if (data.itinerary) {
+        extractStructuredData(data.itinerary);
+      }
     } catch {
       // Silently handle
     } finally {
@@ -431,7 +522,7 @@ export default function PlanPage() {
                 transition={{ duration: 0.5 }}
               >
                 {/* Header */}
-                <div style={{ marginBottom: 32 }}>
+                <div style={{ marginBottom: 24 }}>
                   <h1 className="display-sm gradient-text">
                     Your Trip to {form.destination}
                   </h1>
@@ -453,57 +544,220 @@ export default function PlanPage() {
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start" }}>
-                  {/* Left: Itinerary */}
-                  <div className="glass-card" style={{ padding: 32, minHeight: 400 }}>
-                    <div
-                      style={{
-                        fontFamily: "var(--font-body)",
-                        fontSize: 15,
-                        lineHeight: 1.8,
-                        color: "var(--on-surface)",
-                      }}
+                {/* ── Tab Bar ── */}
+                <div className="tab-bar">
+                  {TAB_CONFIG.map((tab) => (
+                    <button
+                      key={tab.key}
+                      className={`tab-item ${activeTab === tab.key ? "active" : ""}`}
+                      onClick={() => setActiveTab(tab.key)}
                     >
-                      <ReactMarkdown
-                        components={{
-                          h1: ({ children }) => (
-                            <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16, marginTop: 24, fontFamily: "var(--font-headline)", color: "var(--on-surface)" }}>
-                              {children}
-                            </h1>
-                          ),
-                          h2: ({ children }) => (
-                            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12, marginTop: 28, fontFamily: "var(--font-headline)", color: "var(--primary)", borderBottom: "1px solid var(--outline-variant)", paddingBottom: 8 }}>
-                              {children}
-                            </h2>
-                          ),
-                          h3: ({ children }) => (
-                            <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 8, marginTop: 20, fontFamily: "var(--font-headline)", color: "var(--on-surface)", background: "var(--surface-high)", padding: "10px 16px", borderRadius: "var(--radius-md)", borderLeft: "3px solid var(--primary)" }}>
-                              {children}
-                            </h3>
-                          ),
-                          p: ({ children }) => <p style={{ marginBottom: 12 }}>{children}</p>,
-                          li: ({ children }) => (
-                            <li style={{ marginBottom: 6, paddingLeft: 4 }}>{children}</li>
-                          ),
-                          strong: ({ children }) => (
-                            <strong style={{ color: "var(--on-surface)", fontWeight: 600 }}>
-                              {children}
-                            </strong>
-                          ),
-                          em: ({ children }) => (
-                            <em style={{ color: "var(--secondary)", fontStyle: "italic" }}>
-                              {children}
-                            </em>
-                          ),
-                        }}
-                      >
-                        {itinerary}
-                      </ReactMarkdown>
-                    </div>
+                      <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                      {tab.label}
+                      {tab.key !== "itinerary" && extracting && (
+                        <motion.span
+                          animate={{ opacity: [1, 0.3, 1] }}
+                          transition={{ repeat: Infinity, duration: 1 }}
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: "50%",
+                            background: "var(--secondary)",
+                            display: "inline-block",
+                            marginLeft: 4,
+                          }}
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start", marginTop: 24 }}>
+                  {/* Left: Tab Content */}
+                  <div>
+                    <AnimatePresence mode="wait">
+                      {/* ── Itinerary Tab ── */}
+                      {activeTab === "itinerary" && (
+                        <motion.div
+                          key="tab-itinerary"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.25 }}
+                          className="glass-card"
+                          style={{ padding: 32, minHeight: 400 }}
+                        >
+                          <div
+                            data-itinerary-content
+                            style={{
+                              fontFamily: "var(--font-body)",
+                              fontSize: 15,
+                              lineHeight: 1.8,
+                              color: "var(--on-surface)",
+                            }}
+                          >
+                            <ReactMarkdown
+                              components={{
+                                h1: ({ children }) => (
+                                  <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16, marginTop: 24, fontFamily: "var(--font-headline)", color: "var(--on-surface)" }}>
+                                    {children}
+                                  </h1>
+                                ),
+                                h2: ({ children }) => (
+                                  <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12, marginTop: 28, fontFamily: "var(--font-headline)", color: "var(--primary)", borderBottom: "1px solid var(--outline-variant)", paddingBottom: 8 }}>
+                                    {children}
+                                  </h2>
+                                ),
+                                h3: ({ children }) => (
+                                  <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 8, marginTop: 20, fontFamily: "var(--font-headline)", color: "var(--on-surface)", background: "var(--surface-high)", padding: "10px 16px", borderRadius: "var(--radius-md)", borderLeft: "3px solid var(--primary)" }}>
+                                    {children}
+                                  </h3>
+                                ),
+                                p: ({ children }) => <p style={{ marginBottom: 12 }}>{children}</p>,
+                                li: ({ children }) => (
+                                  <li style={{ marginBottom: 6, paddingLeft: 4 }}>{children}</li>
+                                ),
+                                strong: ({ children }) => (
+                                  <strong style={{ color: "var(--on-surface)", fontWeight: 600 }}>
+                                    {children}
+                                  </strong>
+                                ),
+                                em: ({ children }) => (
+                                  <em style={{ color: "var(--secondary)", fontStyle: "italic" }}>
+                                    {children}
+                                  </em>
+                                ),
+                              }}
+                            >
+                              {itinerary}
+                            </ReactMarkdown>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* ── Map Tab ── */}
+                      {activeTab === "map" && (
+                        <motion.div
+                          key="tab-map"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.25 }}
+                        >
+                          {places.length > 0 ? (
+                            <ItineraryMap places={places} destination={form.destination} />
+                          ) : extracting ? (
+                            <div className="glass-card" style={{ padding: 48, textAlign: "center" }}>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                                style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: "50%",
+                                  border: "3px solid var(--outline)",
+                                  borderTopColor: "var(--primary)",
+                                  margin: "0 auto 16px",
+                                }}
+                              />
+                              <p className="body-md" style={{ color: "var(--muted)" }}>
+                                Extracting locations from your itinerary…
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="glass-card" style={{ padding: 48, textAlign: "center" }}>
+                              <div style={{ fontSize: 48, marginBottom: 16 }}>🗺️</div>
+                              <h3 className="headline-sm" style={{ marginBottom: 8 }}>No Map Data</h3>
+                              <p className="body-md" style={{ color: "var(--muted)" }}>
+                                Location data could not be extracted. Try regenerating the itinerary.
+                              </p>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* ── Budget Tab ── */}
+                      {activeTab === "budget" && (
+                        <motion.div
+                          key="tab-budget"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.25 }}
+                        >
+                          {budgetSummary && budgetSummary.total_estimated > 0 ? (
+                            <BudgetTracker budget={budgetSummary} />
+                          ) : extracting ? (
+                            <div className="glass-card" style={{ padding: 48, textAlign: "center" }}>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                                style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: "50%",
+                                  border: "3px solid var(--outline)",
+                                  borderTopColor: "var(--primary)",
+                                  margin: "0 auto 16px",
+                                }}
+                              />
+                              <p className="body-md" style={{ color: "var(--muted)" }}>
+                                Analyzing budget breakdown…
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="glass-card" style={{ padding: 48, textAlign: "center" }}>
+                              <div style={{ fontSize: 48, marginBottom: 16 }}>💰</div>
+                              <h3 className="headline-sm" style={{ marginBottom: 8 }}>No Budget Data</h3>
+                              <p className="body-md" style={{ color: "var(--muted)" }}>
+                                Budget data could not be extracted. Try regenerating the itinerary.
+                              </p>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* ── Photos Tab ── */}
+                      {activeTab === "photos" && (
+                        <motion.div
+                          key="tab-photos"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.25 }}
+                        >
+                          <PhotoPreview places={places} destination={form.destination} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Right: Side Panel */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    {/* Export Actions */}
+                    <div className="glass-card">
+                      <div className="label-sm" style={{ color: "var(--tertiary)", marginBottom: 12 }}>
+                        Export & Share
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <PdfExport
+                          destination={form.destination}
+                          startDate={form.startDate}
+                          endDate={form.endDate}
+                          budget={form.budget}
+                        />
+                        <button
+                          className="btn btn-secondary btn-full"
+                          onClick={() => {
+                            navigator.clipboard.writeText(itinerary);
+                            alert("Itinerary copied to clipboard!");
+                          }}
+                        >
+                          📋 Copy to Clipboard
+                        </button>
+                      </div>
+                    </div>
+
                     {/* AI Activity */}
                     {toolCalls.length > 0 && (
                       <div className="glass-card">
@@ -560,6 +814,9 @@ export default function PlanPage() {
                           setItinerary("");
                           setSessionId("");
                           setToolCalls([]);
+                          setPlaces([]);
+                          setBudgetSummary(null);
+                          setActiveTab("itinerary");
                         }}
                         style={{ flex: 1 }}
                       >

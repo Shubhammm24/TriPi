@@ -7,11 +7,14 @@ Run with:
 from __future__ import annotations
 
 import os
+import re
+import json
 import uuid
 import traceback
 from datetime import datetime
 from typing import Optional
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -271,3 +274,191 @@ async def chat(req: ChatRequest):
             tool_calls=[],
             error=str(e),
         )
+
+
+# ---------------------------------------------------------------------------
+# Structured data extraction (powers Map + Budget)
+# ---------------------------------------------------------------------------
+
+
+class ExtractRequest(BaseModel):
+    """Request body for extracting structured places from an itinerary."""
+
+    itinerary: str
+    destination: str
+    budget: str = ""
+
+
+class PlaceItem(BaseModel):
+    name: str = ""
+    lat: float = 0.0
+    lon: float = 0.0
+    day: int = 1
+    time: str = ""
+    category: str = "attraction"
+    cost: float = 0.0
+    cost_usd: float = 0.0
+    currency: str = "USD"
+    description: str = ""
+
+
+class BudgetBreakdown(BaseModel):
+    accommodation: float = 0.0
+    food: float = 0.0
+    activities: float = 0.0
+    transport: float = 0.0
+    miscellaneous: float = 0.0
+
+
+class BudgetSummary(BaseModel):
+    total_estimated: float = 0.0
+    user_budget: float = 0.0
+    currency: str = "USD"
+    breakdown: BudgetBreakdown = Field(default_factory=BudgetBreakdown)
+
+
+class ExtractResponse(BaseModel):
+    places: list[PlaceItem] = Field(default_factory=list)
+    budget_summary: BudgetSummary = Field(default_factory=BudgetSummary)
+
+
+_extract_llm = None
+
+
+def _get_extract_llm():
+    global _extract_llm
+    if _extract_llm is None:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        _extract_llm = ChatGoogleGenerativeAI(
+            model="gemini-3.5-flash",
+            google_api_key=api_key,
+            temperature=0.1,
+            max_output_tokens=8192,
+        )
+    return _extract_llm
+
+
+@app.post("/api/extract-places", response_model=ExtractResponse)
+async def extract_places(req: ExtractRequest):
+    """Extract structured place data from a markdown itinerary using Gemini."""
+    try:
+        llm = _get_extract_llm()
+
+        extraction_prompt = f"""Analyze this travel itinerary and extract structured data.
+
+ITINERARY:
+{req.itinerary[:6000]}
+
+DESTINATION: {req.destination}
+USER BUDGET: {req.budget}
+
+Return a JSON object with this EXACT structure (no markdown, no code fences, just raw JSON):
+{{
+  "places": [
+    {{
+      "name": "Place Name",
+      "lat": 35.6762,
+      "lon": 139.6503,
+      "day": 1,
+      "time": "9:00 AM",
+      "category": "attraction|restaurant|hotel|transport|shopping|entertainment",
+      "cost": 1500,
+      "cost_usd": 10,
+      "currency": "JPY",
+      "description": "Brief description"
+    }}
+  ],
+  "budget_summary": {{
+    "total_estimated": 285000,
+    "user_budget": 300000,
+    "currency": "USD",
+    "breakdown": {{
+      "accommodation": 120000,
+      "food": 45000,
+      "activities": 35000,
+      "transport": 25000,
+      "miscellaneous": 10000
+    }}
+  }}
+}}
+
+IMPORTANT:
+- Use REAL latitude/longitude coordinates for each place in {req.destination}
+- Extract ALL places mentioned in the itinerary
+- Estimate costs in USD for budget_summary
+- Parse the user budget "{req.budget}" into a number for user_budget
+- Return ONLY valid JSON, no markdown formatting"""
+
+        result = llm.invoke(extraction_prompt)
+        content = result.content if hasattr(result, "content") else str(result)
+
+        # Clean up response — strip markdown code fences if present
+        content = content.strip()
+        content = re.sub(r"^```(?:json)?\s*", "", content)
+        content = re.sub(r"\s*```$", "", content)
+
+        data = json.loads(content)
+
+        places = [PlaceItem(**p) for p in data.get("places", [])]
+        budget_data = data.get("budget_summary", {})
+        breakdown = BudgetBreakdown(**budget_data.get("breakdown", {}))
+        budget_summary = BudgetSummary(
+            total_estimated=budget_data.get("total_estimated", 0),
+            user_budget=budget_data.get("user_budget", 0),
+            currency=budget_data.get("currency", "USD"),
+            breakdown=breakdown,
+        )
+
+        return ExtractResponse(places=places, budget_summary=budget_summary)
+
+    except json.JSONDecodeError as e:
+        print(f"[TriPi] JSON parse error in extract-places: {e}")
+        print(f"[TriPi] Raw content: {content[:500]}")
+        return ExtractResponse()
+    except Exception as e:
+        print(f"[TriPi] ERROR in /api/extract-places: {traceback.format_exc()}")
+        return ExtractResponse()
+
+
+# ---------------------------------------------------------------------------
+# Unsplash image proxy (avoids exposing API key to frontend)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/unsplash")
+async def unsplash_proxy(query: str, per_page: int = 6):
+    """Proxy Unsplash API requests to keep the access key server-side."""
+    access_key = os.getenv("UNSPLASH_ACCESS_KEY", "")
+    if not access_key:
+        # Return empty results gracefully — photos are optional
+        return {"results": []}
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://api.unsplash.com/search/photos",
+                params={"query": query, "per_page": per_page, "orientation": "landscape"},
+                headers={"Authorization": f"Client-ID {access_key}"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        # Return simplified results
+        results = []
+        for photo in data.get("results", []):
+            results.append({
+                "id": photo["id"],
+                "url_small": photo["urls"]["small"],
+                "url_regular": photo["urls"]["regular"],
+                "alt": photo.get("alt_description", query),
+                "author": photo["user"]["name"],
+                "author_url": photo["user"]["links"]["html"],
+            })
+
+        return {"results": results}
+
+    except Exception as e:
+        print(f"[TriPi] Unsplash proxy error: {e}")
+        return {"results": []}
+

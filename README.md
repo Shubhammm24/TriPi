@@ -47,6 +47,10 @@ TriPi is not a simple chatbot — it's a **fully autonomous agentic AI system** 
 | 🔍 **Web Search Fallback** | Current events, festivals & travel advisories via DuckDuckGo |
 | 📚 **RAG Knowledge Base** | Curated travel guides (safety tips, packing lists, budget hacks) stored in ChromaDB |
 | 💬 **Conversational Refinement** | Chat with the agent to tweak your itinerary — powered by LangGraph memory |
+| 🗺️ **Interactive Map** | Leaflet.js map with color-coded day markers, route polylines, and custom popups |
+| 💸 **Budget Tracker** | SVG donut chart, progress bar, and per-category spending breakdown |
+| 📸 **Photo Previews** | Unsplash-powered destination photo gallery with lightbox viewer |
+| 📄 **PDF Export** | Download a beautifully formatted A4 itinerary with branded cover page |
 | 🎨 **Premium UI** | Glassmorphism design system with dark/light themes, Framer Motion animations, and responsive layout |
 
 ---
@@ -119,6 +123,8 @@ TriPi is not a simple chatbot — it's a **fully autonomous agentic AI system** 
 | **TypeScript** | Type-safe frontend code |
 | **Framer Motion** | Smooth page transitions & micro-animations |
 | **React Markdown** | Renders agent's markdown itineraries |
+| **Leaflet.js + React Leaflet** | Interactive maps with custom markers & polylines |
+| **html2pdf.js** | Client-side PDF generation |
 | **Vanilla CSS** | Custom glassmorphism design system with CSS variables |
 
 ### External APIs
@@ -129,6 +135,7 @@ TriPi is not a simple chatbot — it's a **fully autonomous agentic AI system** 
 | **REST Countries** | Country facts, currencies, languages, timezones |
 | **Overpass / OpenStreetMap** | Points of interest, attractions, restaurants |
 | **DuckDuckGo Search** | Web search fallback for current events |
+| **Unsplash** *(optional)* | Destination photos for visual previews |
 | **SerpApi** *(optional)* | Google Flights data — schedules & pricing |
 | **Amadeus** *(optional)* | Flight & hotel search with filtering |
 
@@ -161,6 +168,7 @@ GOOGLE_API_KEY=your_gemini_api_key_here
 SERPAPI_KEY=              # Google Flights search (free: 100 searches/mo)
 AMADEUS_API_KEY=          # Flight & hotel search (free test tier)
 AMADEUS_API_SECRET=       # Amadeus authentication secret
+UNSPLASH_ACCESS_KEY=      # Destination photos (free: unsplash.com/developers)
 ```
 
 > **Note:** TriPi works fully with just the `GOOGLE_API_KEY`. The optional keys unlock premium flight and hotel search tools.
@@ -381,6 +389,39 @@ TriPi features a **"Hyper-Spectral" glassmorphism design** with:
 - ✨ **Micro-animations** via Framer Motion (fade-ups, staggered reveals, hover effects)
 - 📱 **Fully responsive** — optimized for desktop, tablet, and mobile
 - 🎨 **CSS custom properties** — centralized color palette, spacing, and typography tokens
+
+---
+
+## 🐳 Docker Deployment
+
+Deploy both frontend and backend with a single command:
+
+```bash
+# Build and start both services
+docker-compose up --build -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+> 🟢 Frontend: **http://localhost:3000** · Backend: **http://localhost:8000**
+
+### Deploy to Cloud
+
+| Platform | Backend | Frontend |
+|---|---|---|
+| **Railway** | Deploy from `Dockerfile.backend` | Deploy from `Dockerfile.frontend` |
+| **Render** | Web Service → Python | Static Site → Next.js |
+| **Vercel** | ❌ (use Railway/Render) | `cd frontend && vercel` |
+| **AWS** | ECS / App Runner | Amplify / S3 + CloudFront |
+
+**Environment variables** must be set on your cloud provider:
+- `GOOGLE_API_KEY` (required)
+- `NEXT_PUBLIC_API_URL` (set to your deployed backend URL)
+- `UNSPLASH_ACCESS_KEY` (optional)
 
 ---
 

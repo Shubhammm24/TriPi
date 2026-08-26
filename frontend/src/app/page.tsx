@@ -4,12 +4,14 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "@/app/components/Navbar";
 
+const EASE_CURVE = [0.4, 0, 0.2, 1] as const;
+
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.12, duration: 0.5, ease: [0.4, 0, 0.2, 1] },
+    transition: { delay: i * 0.12, duration: 0.5, ease: [...EASE_CURVE] as [number, number, number, number] },
   }),
 };
 
