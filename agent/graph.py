@@ -44,8 +44,9 @@ def build_agent(api_key: str | None = None):
     """
     key = api_key or os.getenv("GOOGLE_API_KEY", "")
 
+    model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     llm = ChatGoogleGenerativeAI(
-        model="gemini-3.5-flash",
+        model=model_name,
         google_api_key=key,
         temperature=0.7,
         max_output_tokens=8192,

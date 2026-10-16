@@ -217,11 +217,17 @@ class ChatView(APIView):
         data = serializer.validated_data
 
         # Get or create session
-        try:
-            session = Session.objects.get(id=data["session_id"])
-        except Session.DoesNotExist:
+        session_id = data.get("session_id")
+        if session_id:
+            try:
+                session = Session.objects.get(id=session_id)
+            except Session.DoesNotExist:
+                session = Session.objects.create(
+                    id=session_id,
+                    user=request.user if request.user.is_authenticated else None,
+                )
+        else:
             session = Session.objects.create(
-                id=data["session_id"],
                 user=request.user if request.user.is_authenticated else None,
             )
 
@@ -303,8 +309,9 @@ def _get_extract_llm():
     """Lazy-load the extraction LLM (same pattern as FastAPI main.py)."""
     global _extract_llm
     if _extract_llm is None:
+        model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
         _extract_llm = ChatGoogleGenerativeAI(
-            model="gemini-3.5-flash",
+            model=model_name,
             google_api_key=settings.GOOGLE_API_KEY,
             temperature=0.1,
             max_output_tokens=8192,
@@ -533,3 +540,35 @@ class SessionDetailView(APIView):
 
         serializer = SessionDetailSerializer(session)
         return Response(serializer.data)
+
+
+# ---------------------------------------------------------------------------
+# Voice & Speech Configuration
+# ---------------------------------------------------------------------------
+
+
+class VoiceConfigView(APIView):
+    """GET /api/voice-config — capabilities and configuration for speech features."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({
+            "stt_supported": True,
+            "tts_supported": True,
+            "engine": "web_speech_api",
+            "cloud_tts_available": False,
+            "cloud_stt_available": False,
+            "default_language": "en-US",
+            "supported_languages": [
+                {"code": "en-US", "name": "English (US)"},
+                {"code": "en-GB", "name": "English (UK)"},
+                {"code": "en-IN", "name": "English (India)"},
+                {"code": "es-ES", "name": "Español (España)"},
+                {"code": "fr-FR", "name": "Français (France)"},
+                {"code": "de-DE", "name": "Deutsch"},
+                {"code": "ja-JP", "name": "日本語 (Japanese)"},
+                {"code": "hi-IN", "name": "हिन्दी (Hindi)"},
+            ],
+        })
+

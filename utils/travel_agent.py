@@ -39,13 +39,13 @@ class TravelAgent:
 
         # Initialize Gemini model for direct generation
         self.model = genai.GenerativeModel(
-            "gemini-3.5-flash",
+            "gemini-3.8-flash",
             generation_config=generation_config
         )
 
         # Initialize LangChain conversation chain for iterative refinement
         llm = ChatGoogleGenerativeAI(
-            model="gemini-3.5-flash",
+            model="gemini-3.8-flash",
             google_api_key=api_key,
             temperature=0.7,
         )

@@ -17,7 +17,7 @@ def get_embeddings(api_key: str | None = None) -> GoogleGenerativeAIEmbeddings:
     """Return a Gemini embeddings model instance."""
     key = api_key or os.getenv("GOOGLE_API_KEY", "")
     return GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
+        model="models/gemini-embedding-001",
         google_api_key=key,
     )
 

@@ -61,7 +61,7 @@ class RefineRequestSerializer(serializers.Serializer):
 class ChatRequestSerializer(serializers.Serializer):
     """Validates POST /api/chat."""
 
-    session_id = serializers.UUIDField()
+    session_id = serializers.UUIDField(required=False, allow_null=True)
     message = serializers.CharField()
 
 

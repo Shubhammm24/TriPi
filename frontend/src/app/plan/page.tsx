@@ -8,6 +8,9 @@ import ReactMarkdown from "react-markdown";
 import BudgetTracker from "@/app/components/BudgetTracker";
 import PhotoPreview from "@/app/components/PhotoPreview";
 import PdfExport from "@/app/components/PdfExport";
+import VoiceInput from "@/app/components/VoiceInput";
+import VoicePlayer from "@/app/components/VoicePlayer";
+import VoiceChatPanel from "@/app/components/VoiceChatPanel";
 
 // Dynamically import map to avoid SSR issues with Leaflet
 const ItineraryMap = dynamic(() => import("@/app/components/ItineraryMap"), {
@@ -333,21 +336,41 @@ export default function PlanPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                     <div>
                       <label className="input-label">Destination</label>
-                      <input
-                        className="input-field"
-                        placeholder="e.g. Kyoto, Japan"
-                        value={form.destination}
-                        onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                      />
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input
+                          className="input-field"
+                          placeholder="e.g. Kyoto, Japan"
+                          value={form.destination}
+                          onChange={(e) => setForm({ ...form, destination: e.target.value })}
+                          style={{ flex: 1 }}
+                        />
+                        <VoiceInput
+                          compact
+                          appendMode={false}
+                          currentValue={form.destination}
+                          onTranscript={(text) => setForm({ ...form, destination: text })}
+                          tooltip="Speak your destination"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="input-label">Traveling From</label>
-                      <input
-                        className="input-field"
-                        placeholder="e.g. New Delhi"
-                        value={form.origin}
-                        onChange={(e) => setForm({ ...form, origin: e.target.value })}
-                      />
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input
+                          className="input-field"
+                          placeholder="e.g. New Delhi"
+                          value={form.origin}
+                          onChange={(e) => setForm({ ...form, origin: e.target.value })}
+                          style={{ flex: 1 }}
+                        />
+                        <VoiceInput
+                          compact
+                          appendMode={false}
+                          currentValue={form.origin}
+                          onTranscript={(text) => setForm({ ...form, origin: text })}
+                          tooltip="Speak your origin"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="input-label">Start Date</label>
@@ -816,6 +839,7 @@ export default function PlanPage() {
                         >
                           📋 Copy to Clipboard
                         </button>
+                        {itinerary && <VoicePlayer markdown={itinerary} />}
                       </div>
                     </div>
 
@@ -849,14 +873,25 @@ export default function PlanPage() {
                       <div className="label-sm" style={{ color: "var(--primary)", marginBottom: 12 }}>
                         Refine Your Trip
                       </div>
-                      <textarea
-                        className="input-field"
-                        placeholder="E.g. Add more outdoor activities, swap Day 2 lunch…"
-                        value={feedback}
-                        onChange={(e) => setFeedback(e.target.value)}
-                        rows={3}
-                        style={{ resize: "vertical", marginBottom: 12 }}
-                      />
+                      <div style={{ position: "relative" }}>
+                        <textarea
+                          className="input-field"
+                          placeholder="E.g. Add more outdoor activities, swap Day 2 lunch…"
+                          value={feedback}
+                          onChange={(e) => setFeedback(e.target.value)}
+                          rows={3}
+                          style={{ resize: "vertical", marginBottom: 12, paddingRight: 52 }}
+                        />
+                        <div style={{ position: "absolute", top: 8, right: 8 }}>
+                          <VoiceInput
+                            compact
+                            appendMode
+                            currentValue={feedback}
+                            onTranscript={(text) => setFeedback(text)}
+                            tooltip="Speak your refinement"
+                          />
+                        </div>
+                      </div>
                       <button
                         className="btn btn-primary btn-full"
                         onClick={handleRefine}
@@ -892,6 +927,17 @@ export default function PlanPage() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Voice Concierge Interactive Assistant */}
+      <VoiceChatPanel
+        sessionId={sessionId}
+        destination={form.destination}
+        itinerary={itinerary}
+        onItineraryUpdated={(newItinerary) => {
+          setItinerary(newItinerary);
+          extractStructuredData(newItinerary);
+        }}
+      />
     </>
   );
 }

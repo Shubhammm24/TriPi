@@ -21,6 +21,7 @@ from trips.views import (
     SessionListView,
     TaskStatusView,
     UnsplashProxyView,
+    VoiceConfigView,
 )
 
 urlpatterns = [
@@ -34,6 +35,9 @@ urlpatterns = [
 
     # Task polling
     path("api/tasks/<uuid:task_id>/", TaskStatusView.as_view(), name="task-status"),
+
+    # Voice / Speech configuration
+    path("api/voice-config", VoiceConfigView.as_view(), name="voice-config"),
 
     # Synchronous utility endpoints
     path("api/extract-places", ExtractPlacesView.as_view(), name="extract-places"),

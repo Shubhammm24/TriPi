@@ -5,238 +5,250 @@
 <h1 align="center">✈️ TriPi — Agentic AI Travel Planner</h1>
 
 <p align="center">
-  <strong>An autonomous, tool-calling AI agent that plans hyper-personalized travel itineraries using live data.</strong><br/>
-  Built with <b>LangGraph</b> · <b>Google Gemini</b> · <b>Django + DRF</b> · <b>Celery + Redis</b> · <b>PostgreSQL</b> · <b>Next.js</b>
+  <strong>An autonomous, tool-calling AI agent that crafts hyper-personalized, live-data-backed travel itineraries with interactive maps, budget tracking, and voice interaction.</strong><br/>
+  Built with <b>LangGraph</b> · <b>Google Gemini</b> · <b>Django REST Framework</b> · <b>Celery</b> · <b>PostgreSQL / SQLite</b> · <b>Next.js 16</b>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/node-18+-339933?style=flat-square&logo=nodedotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/LangGraph-ReAct_Agent-FF6B6B?style=flat-square" />
-  <img src="https://img.shields.io/badge/Gemini_3.5_Flash-LLM-4285F4?style=flat-square&logo=google&logoColor=white" />
-  <img src="https://img.shields.io/badge/status-Active-success?style=flat-square" />
-  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+" />
+  <img src="https://img.shields.io/badge/node-18+-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node 18+" />
+  <img src="https://img.shields.io/badge/LangGraph-ReAct_Agent-FF6B6B?style=flat-square" alt="LangGraph" />
+  <img src="https://img.shields.io/badge/Gemini_Flash-LLM-4285F4?style=flat-square&logo=google&logoColor=white" alt="Google Gemini" />
+  <img src="https://img.shields.io/badge/Django-6.x_%2B_DRF-092E20?style=flat-square&logo=django&logoColor=white" alt="Django + DRF" />
+  <img src="https://img.shields.io/badge/Next.js-16_%28App_Router%29-black?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/status-Active-success?style=flat-square" alt="Status Active" />
+  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT License" />
 </p>
 
 ---
 
-## 🧠 What Is TriPi?
+## 📌 Table of Contents
 
-TriPi is not a simple chatbot — it's a **fully autonomous agentic AI system** that acts as your personal travel concierge. Given a destination, dates, budget, and personal preferences, the agent:
+- [🧠 What is TriPi?](#-what-is-tripi)
+- [✨ Key Features](#-key-features)
+- [🏗️ System Architecture](#️-system-architecture)
+- [🚀 Quick Start & How to Run](#-quick-start--how-to-run)
+  - [Prerequisites](#prerequisites)
+  - [Option A: Local Development (Recommended)](#option-a-local-development-recommended)
+  - [Option B: Containerized with Docker Compose](#option-b-containerized-with-docker-compose)
+- [📁 Project Structure](#-project-structure)
+- [🤖 How the Agent Works (ReAct Loop)](#-how-the-agent-works-react-loop)
+- [🎙️ Voice Interaction (STT & TTS)](#️-voice-interaction-stt--tts)
+- [🔧 REST API Reference](#-rest-api-reference)
+- [⚙️ Environment Variables](#️-environment-variables)
+- [🧪 Testing & Quality Assurance](#-testing--quality-assurance)
+- [❓ Troubleshooting & FAQ](#-troubleshooting--faq)
+- [📄 License](#-license)
 
-1. **Autonomously decides** which real-time tools to call (weather, flights, attractions, currency, web search, knowledge base)
-2. **Gathers live data** from 8+ external APIs and a built-in RAG knowledge base
-3. **Synthesizes everything** into a rich, day-by-day itinerary with timings, costs, restaurant picks, and indoor backup plans
-4. **Refines on demand** — chat with the agent to swap activities, adjust budget, or ask follow-up questions using full conversational memory
+---
 
-> **In short:** You describe your dream trip → TriPi does everything a human travel agent would — automatically.
+## 🧠 What is TriPi?
+
+TriPi is not a standard static chatbot. It is a **fully autonomous agentic AI system** that functions as an intelligent personal travel concierge. When provided with a destination, travel dates, budget, travel style, and dietary or mobility requirements, the agent:
+
+1. **Autonomously Reasons & Chains Tools**: Selects relevant live data providers (weather, attractions, currency, local facts, search, knowledge base) dynamically using the ReAct (Reason + Act) pattern.
+2. **Retrieves Real-Time Ground Truth**: Queries external APIs and a built-in ChromaDB RAG vector store for verified travel tips, current safety guidelines, and live currency rates.
+3. **Synthesizes Complete Itineraries**: Generates comprehensive day-by-day itineraries featuring exact timings, transport recommendations, meal spots matching dietary needs, estimated budgets, and bad-weather indoor alternatives.
+4. **Refines Iteratively with Conversational Memory**: Supports multi-turn chat powered by LangGraph's `MemorySaver` — ask questions, swap activities, adjust budgets, or tailor plans dynamically.
+5. **Interactive & Voice-Enabled**: Visualizes places on interactive Leaflet maps, breaks down budgets with dynamic donut charts, fetches real Unsplash destination photos, exports branded PDFs, and allows hands-free voice conversations with Speech-to-Text and Text-to-Speech.
 
 ---
 
 ## ✨ Key Features
 
-| Feature | Description |
-|---|---|
-| 🤖 **Autonomous Agent** | LangGraph ReAct agent that dynamically selects and chains tools based on your preferences — no hardcoded flows |
-| 🌤️ **Live Weather** | Real-time forecasts via Open-Meteo for your exact travel dates |
-| ✈️ **Flight Search** | Live flight schedules, airlines & pricing via SerpApi / Google Flights |
-| 🏨 **Hotel Search** | Accommodation options via Amadeus API with filtering by amenities & budget |
-| 💰 **Currency Conversion** | Auto-converts your budget to local currency via ExchangeRate-API |
-| 📍 **Smart Places Discovery** | Top attractions, restaurants & hidden gems via Overpass / OpenStreetMap |
-| 🌍 **Destination Intelligence** | Country facts, visa requirements, language, timezone via REST Countries |
-| 🔍 **Web Search Fallback** | Current events, festivals & travel advisories via DuckDuckGo |
-| 📚 **RAG Knowledge Base** | Curated travel guides (safety tips, packing lists, budget hacks) stored in ChromaDB |
-| 💬 **Conversational Refinement** | Chat with the agent to tweak your itinerary — powered by LangGraph memory |
-| 🗺️ **Interactive Map** | Leaflet.js map with color-coded day markers, route polylines, and custom popups |
-| 💸 **Budget Tracker** | SVG donut chart, progress bar, and per-category spending breakdown |
-| 📸 **Photo Previews** | Unsplash-powered destination photo gallery with lightbox viewer |
-| 📄 **PDF Export** | Download a beautifully formatted A4 itinerary with branded cover page |
-| 🎨 **Premium UI** | Glassmorphism design system with dark/light themes, Framer Motion animations, and responsive layout |
+| Feature | Category | Description |
+|---|---|---|
+| 🤖 **Autonomous ReAct Agent** | AI / Agentic | Powered by LangGraph and Google Gemini with dynamic tool selection and conversational state management. |
+| 🎙️ **Voice AI (STT & TTS)** | Multimodal | Hands-free voice input (speech recognition) and natural speech output (voice player) supporting 8+ languages/accents. |
+| 🌤️ **Live Weather Forecasts** | Real-Time Tool | Exact weather forecasts for travel dates via Open-Meteo to recommend outdoor vs. indoor activities. |
+| 📍 **Smart Places Discovery** | Real-Time Tool | Discovers top attractions, monuments, restaurants, and hidden gems via OpenStreetMap & Overpass API. |
+| 💰 **Live Currency Conversion** | Real-Time Tool | Real-time exchange rates via ExchangeRate-API with automatic conversions into destination currency. |
+| 🌍 **Country & Travel Intel** | Real-Time Tool | Vital destination facts, languages, timezones, and emergency info via REST Countries API. |
+| 📚 **RAG Knowledge Base** | Knowledge Retrieval | Curated guides (safety, packing lists, money-saving tips) embedded in ChromaDB with `models/gemini-embedding-001`. |
+| 🔍 **Web Search Fallback** | Real-Time Tool | Live search via DuckDuckGo for festivals, temporary closures, and current travel advisories. |
+| ✈️ **Flights & Hotels (Optional)**| External APIs | Integrated SerpApi (Google Flights) and Amadeus API for real flight pricing and hotel accommodations. |
+| 🗺️ **Interactive Leaflet Map** | UI / Visualization | Day-by-day color-coded route markers, coordinates extraction, and custom popup details. |
+| 💸 **Budget Tracker** | UI / Analytics | Visual SVG donut chart and spending category breakdown (Stay, Food, Activities, Transport). |
+| 📸 **Destination Photo Gallery** | Media | Unsplash image integration with high-resolution lightbox previews. |
+| 📄 **One-Click PDF Export** | Utility | Clean client-side export to formatted, printable A4 PDF itineraries with cover styling. |
+| 🎨 **Hyper-Spectral Design** | UI / UX | Glassmorphism interface, light/dark themes, responsive layouts, and fluid Framer Motion animations. |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (Next.js)                         │
-│  Landing Page ─── Preference Form ─── Itinerary View ─── Chat UI  │
-│         Framer Motion  ·  Glassmorphism  ·  React Markdown         │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │  REST API (JSON)
-                               ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                   BACKEND (Django + DRF + Celery)                   │
-│                                                                     │
-│  POST /api/generate   ─── Returns 202 + task_id (async via Celery) │
-│  POST /api/refine     ─── Returns 202 + task_id (async via Celery) │
-│  POST /api/chat       ─── Returns 202 + task_id (async via Celery) │
-│  GET  /api/tasks/{id} ─── Poll for task completion                 │
-│  POST /api/auth/*     ─── JWT register / login / refresh           │
-│  GET  /api/sessions/* ─── User's trip history                      │
-│  GET  /health         ─── Health check                             │
-│                                                                     │
-│  PostgreSQL ──► Session, TripPreferences, Itinerary, Message, Task │
-│  Redis ──► Celery broker + result backend                          │
-└──────────────────────────────┬──────────────────────────────────────┘
-                               │
-                   ┌───────────┴───────────┐
-                   ▼                       ▼
-┌─────────────────────────┐  ┌──────────────────────────────────┐
-│    CELERY WORKER        │  │  LANGGRAPH ReAct AGENT           │
-│                         │  │  (Gemini 3.5 Flash)              │
-│  Receives task_id ──────┼──►                                  │
-│  Runs agent in bg       │  │  System Prompt ──► Tool Loop     │
-│  Updates DB on finish   │  │  ──► Synthesize Itinerary        │
-│  Records duration,      │  │                                  │
-│  tools used, tokens     │  │  8 Tools: Weather, Flights,      │
-│                         │  │  Hotels, Places, Currency,       │
-│  Stuck task recovery    │  │  Destination, Search, RAG        │
-│  via periodic check     │  │                                  │
-└─────────────────────────┘  │  MemorySaver (conversation mem)  │
-                              └──────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     KNOWLEDGE LAYER (RAG)                           │
-│                                                                     │
-│   ChromaDB Vector Store ◄── Markdown Docs (safety, packing, tips)  │
-│   LangChain Text Splitters  ·  Google Generative AI Embeddings     │
-└─────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                            FRONTEND (Next.js 16)                           │
+│  Landing Page  ·  Preferences Form  ·  Itinerary View  ·  Voice & Chat UI  │
+│      React Leaflet Map  ·  Budget Donut  ·  PDF Export  ·  Framer Motion   │
+│            Web Speech API (STT & TTS Voice Engine)                         │
+└─────────────────────────────────────┬──────────────────────────────────────┘
+                                      │  REST API (JSON over HTTP)
+                                      ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                      BACKEND (Django REST Framework)                       │
+│                                                                            │
+│  POST /api/generate   ─── Dispatches async agent task (Returns 202)        │
+│  POST /api/refine     ─── Refines itinerary using session thread           │
+│  POST /api/chat       ─── Conversational agent chat with thread memory     │
+│  GET  /api/tasks/{id} ─── Task status polling endpoint                     │
+│  GET  /api/voice-config ─ Supported languages & speech configuration       │
+│  POST /api/extract-places ─ Extracts coordinates & POIs for Leaflet map    │
+│  GET  /api/unsplash   ─── Destination photo proxy                          │
+│  GET  /health         ─── Healthcheck probe                                │
+│                                                                            │
+│  • Storage: SQLite (Zero-setup Dev) or PostgreSQL (Production)             │
+│  • Task Execution: Celery Eager (In-memory Dev) or Redis Worker (Prod)     │
+└─────────────────────────────────────┬──────────────────────────────────────┘
+                                      │
+                         ┌────────────┴────────────┐
+                         ▼                         ▼
+┌──────────────────────────────────┐     ┌──────────────────────────────────┐
+│      CELERY WORKER (Optional)    │     │      LANGGRAPH ReAct AGENT       │
+│   (For background scaling with   │     │  (Google Gemini 3.8 / 2.5 Flash) │
+│    Redis message broker)         │     │                                  │
+│                                  │     │  State Loop:                     │
+│  - Executes 30-60s agent jobs    │◄────┤  Reason ──► Act ──► Observe      │
+│  - Updates DB task & session     │     │                                  │
+│  - Handles retry & timeouts      │     │  Memory: MemorySaver (threads)   │
+└──────────────────────────────────┘     └─────────────────┬────────────────┘
+                                                           │
+                      ┌────────────────────────────────────┴────────────────────────────────────┐
+                      ▼                                                                         ▼
+┌───────────────────────────────────────────────┐                     ┌───────────────────────────────────────────────┐
+│               LIVE TOOL LAYER                 │                     │             KNOWLEDGE LAYER (RAG)             │
+│  • Open-Meteo (Weather forecasts)             │                     │  • ChromaDB Vector Store                      │
+│  • REST Countries (Destination facts)         │                     │  • Google Gemini Embeddings                   │
+│  • Overpass / OpenStreetMap (Places & POIs)   │                     │  • Curated Markdown Guides:                   │
+│  • ExchangeRate-API (Currency conversions)    │                     │    - Safety & Scam Advisories                 │
+│  • DuckDuckGo (Live web search fallback)      │                     │    - Packing Checklists & Tips                │
+│  • SerpApi / Amadeus (Flights & Hotels)       │                     │    - Budget Travel Hacks                      │
+└───────────────────────────────────────────────┘                     └───────────────────────────────────────────────┘
 ```
 
-### Why Django + Celery over FastAPI?
-
-FastAPI's async model lets you handle many I/O-bound requests concurrently, but
-TriPi's agent runs are **CPU-bound + 30-60 seconds long**. With 4 Uvicorn workers,
-4 concurrent agent requests would exhaust the entire pool. Django + Celery solves
-this by separating concerns: Django handles fast HTTP in/out (< 200ms), while Celery
-workers run the agent in a separate process pool that scales independently.
-
-Additionally, Django provides:
-- **ORM + Migrations**: Type-safe schema evolution across the team.
-- **Admin site**: Free data inspection dashboard at `/admin/`.
-- **Auth + Permissions**: Built-in user model, JWT, object-level permissions.
-- **Ecosystem**: django-debug-toolbar, pytest-django, 20+ years of battle-tested middleware.
+### Why Django REST Framework + Celery?
+- **Separation of Concerns**: Generating a comprehensive 5-day trip with 8+ external API calls takes 20-40 seconds. A synchronous web server would block worker threads. Django returns an immediate `202 Accepted` with a `task_id`, allowing the client to poll without timing out.
+- **Graceful Local Fallback**: In development, Celery runs in eager (in-memory) mode and Django uses SQLite, meaning **no Docker, PostgreSQL, or Redis installation is required to run the project locally**.
+- **Admin Dashboard**: Inspect sessions, itineraries, prompt history, and task statuses directly via Django's built-in `/admin/`.
 
 ---
 
-## 🛠️ Technology Stack
-
-### Backend
-| Technology | Purpose |
-|---|---|
-| **Python 3.10+** | Core runtime |
-| **Django 6.x + DRF** | REST API server with ORM, admin, and auth |
-| **Celery + Redis** | Background task processing for 30-60s agent runs |
-| **PostgreSQL** | Persistent storage for sessions, itineraries, messages |
-| **LangGraph** | ReAct agent orchestration with built-in tool loop |
-| **LangChain** | LLM abstractions, tool definitions, memory management |
-| **Google Gemini 3.5 Flash** | Large Language Model powering reasoning & generation |
-| **ChromaDB** | Vector database for RAG knowledge retrieval |
-| **SimpleJWT** | Token-based authentication for the Next.js frontend |
-
-### Frontend
-| Technology | Purpose |
-|---|---|
-| **Next.js 16** | React framework with App Router |
-| **TypeScript** | Type-safe frontend code |
-| **Framer Motion** | Smooth page transitions & micro-animations |
-| **React Markdown** | Renders agent's markdown itineraries |
-| **Leaflet.js + React Leaflet** | Interactive maps with custom markers & polylines |
-| **html2pdf.js** | Client-side PDF generation |
-| **Vanilla CSS** | Custom glassmorphism design system with CSS variables |
-
-### External APIs
-| API | Data Provided |
-|---|---|
-| **Open-Meteo** | Weather forecasts (free, no key required) |
-| **ExchangeRate-API** | Real-time currency conversion (free tier) |
-| **REST Countries** | Country facts, currencies, languages, timezones |
-| **Overpass / OpenStreetMap** | Points of interest, attractions, restaurants |
-| **DuckDuckGo Search** | Web search fallback for current events |
-| **Unsplash** *(optional)* | Destination photos for visual previews |
-| **SerpApi** *(optional)* | Google Flights data — schedules & pricing |
-| **Amadeus** *(optional)* | Flight & hotel search with filtering |
-
----
-
-## 🚀 Getting Started
+## 🚀 Quick Start & How to Run
 
 ### Prerequisites
 
-- **Python 3.10+** — [python.org](https://www.python.org/downloads/)
-- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
-- **Google Gemini API Key** — [aistudio.google.com](https://aistudio.google.com/apikey) (free)
+Ensure the following are installed on your machine:
+- **Python 3.10+** — [Download Python](https://www.python.org/downloads/)
+- **Node.js 18+ & npm** — [Download Node.js](https://nodejs.org/)
+- **Google Gemini API Key** (Free) — [Get a Gemini API Key](https://aistudio.google.com/apikey)
 
-### 1. Clone the Repository
+---
 
+### Option A: Local Development (Recommended)
+
+Run TriPi natively on your computer in minutes with **zero database configuration** (uses SQLite + In-Memory Celery).
+
+#### 1. Clone & Enter the Directory
 ```bash
 git clone https://github.com/Shubhammm24/TriPi.git
 cd TriPi
 ```
 
-### 2. Configure Environment Variables
-
+#### 2. Configure Environment Variables
 Create a `.env` file in the project root:
-
-```env
-# ─── Required ──────────────────────────────────────────
-GOOGLE_API_KEY=your_gemini_api_key_here
-
-# ─── Optional (enhance agent capabilities) ────────────
-SERPAPI_KEY=              # Google Flights search (free: 100 searches/mo)
-AMADEUS_API_KEY=          # Flight & hotel search (free test tier)
-AMADEUS_API_SECRET=       # Amadeus authentication secret
-UNSPLASH_ACCESS_KEY=      # Destination photos (free: unsplash.com/developers)
-```
-
-> **Note:** TriPi works fully with just the `GOOGLE_API_KEY`. The optional keys unlock premium flight and hotel search tools.
-
-### 3. Backend Setup (FastAPI)
-
 ```bash
-# Create and activate virtual environment
-python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # macOS / Linux
+# Windows (PowerShell)
+Copy-Item .env.example .env
 
-# Install Python dependencies
-pip install -r requirements.txt
-
-# (Optional) Seed the RAG knowledge base with travel guides
-python -m rag.ingest
-
-# Start the backend server
-python -m uvicorn main:app --reload --port 8000
+# macOS / Linux
+cp .env.example .env
 ```
 
-> 🟢 Backend API running at **http://localhost:8000**
-> 📖 Interactive API docs at **http://localhost:8000/docs**
+Open `.env` and add your Google Gemini API key:
+```env
+GOOGLE_API_KEY=your_gemini_api_key_here
+```
+*(Optional keys like `SERPAPI_API_KEY`, `AMADEUS_API_KEY`, and `UNSPLASH_ACCESS_KEY` can be left blank initially — TriPi operates with full functionality using only `GOOGLE_API_KEY`.)*
 
-### 4. Frontend Setup (Next.js)
+#### 3. Backend Setup
 
-Open a **new terminal**:
+**Create and activate a virtual environment:**
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# macOS / Linux
+python3 -m venv venv
+source venv/bin/activate
+```
+
+**Install dependencies:**
+```bash
+pip install -r requirements.txt
+```
+
+**Run database migrations:**
+```bash
+python backend/manage.py migrate
+```
+
+**(Optional) Ingest RAG Knowledge Base:**
+Embed the curated travel safety, packing, and budget guides into ChromaDB:
+```bash
+python -m rag.ingest
+```
+
+**Start the Django Backend Server:**
+```bash
+python backend/manage.py runserver 8000
+```
+> 🟢 **Backend running at:** [http://127.0.0.1:8000](http://127.0.0.1:8000)  
+> 🔍 **Health check:** [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)  
+> 🛡️ **Django Admin:** [http://127.0.0.1:8000/admin](http://127.0.0.1:8000/admin)  
+
+---
+
+#### 4. Frontend Setup
+
+Open a **separate terminal window**:
 
 ```bash
 cd frontend
 
-# Install Node dependencies
+# Install Node modules
 npm install
 
-# Start the dev server
+# Start Next.js development server
 npm run dev
 ```
 
-> 🟢 Frontend running at **http://localhost:3000**
+> 🟢 **Frontend running at:** [http://localhost:3000](http://localhost:3000)
 
-### 5. Use the App
+---
 
-1. Open **http://localhost:3000** in your browser
-2. Click **"Start Planning"** to access the preference form
-3. Fill in your destination, dates, budget, and interests
-4. Hit **"Generate Itinerary"** — the agent autonomously gathers data and builds your plan
-5. Use the **chat panel** to refine, ask questions, or swap activities
+#### 5. Open the Application
+1. Open your browser and navigate to **`http://localhost:3000`**.
+2. Click **"Start Planning"** to enter your trip destination, dates, budget, and travel preferences.
+3. Click **"Generate Itinerary"** — the agent will execute real-time tools and generate your schedule.
+4. Interact with the **interactive map**, **budget tracker**, **photo preview**, or use the **voice / chat panel** to refine!
+
+---
+
+### Option B: Containerized with Docker Compose
+
+To run the complete production-grade stack including **PostgreSQL**, **Redis**, **Celery Worker**, **Django Backend**, and **Next.js Frontend**:
+
+```bash
+# Ensure Docker Desktop is installed and running
+docker compose up --build -d
+```
+
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:8000`
+- Check logs: `docker compose logs -f`
+- Stop containers: `docker compose down`
 
 ---
 
@@ -244,216 +256,314 @@ npm run dev
 
 ```
 TriPi/
-├── agent/                          # LangGraph ReAct agent
-│   ├── graph.py                    #   Agent builder — wires LLM + tools + memory
-│   ├── prompts.py                  #   System prompt & itinerary generation template
-│   ├── state.py                    #   Pydantic state schema (TripRequest, AgentState)
-│   └── callbacks.py                #   Streaming tool activity callbacks for UI
+├── agent/                          # LangGraph ReAct Autonomous Agent
+│   ├── graph.py                    #   Agent builder: wires Gemini LLM + tools + MemorySaver
+│   ├── prompts.py                  #   System prompts & synthesis templates
+│   ├── state.py                    #   Pydantic state schemas (AgentState, TripRequest)
+│   └── callbacks.py                #   Real-time activity callbacks for UI tracking
 │
-├── tools/                          # Agent tool definitions (LangChain @tool)
-│   ├── weather.py                  #   Open-Meteo weather forecast
-│   ├── flights.py                  #   SerpApi / Google Flights search
-│   ├── hotels.py                   #   Amadeus hotel search
-│   ├── places.py                   #   Overpass POI & attraction search
-│   ├── destination.py              #   REST Countries destination facts
-│   ├── currency.py                 #   ExchangeRate-API currency conversion
-│   ├── web_search.py               #   DuckDuckGo web search fallback
-│   └── knowledge.py                #   ChromaDB RAG knowledge retrieval
+├── backend/                        # Django REST Framework Backend
+│   ├── manage.py                   #   Django management script
+│   ├── tripi_project/              #   Root configuration
+│   │   ├── settings.py             #     Database & Celery auto-fallback configuration
+│   │   ├── urls.py                 #     Root routing (/api/, /admin/, /health)
+│   │   ├── wsgi.py                 #     WSGI entry point for Gunicorn
+│   │   └── celery.py               #     Celery broker & task app initialization
+│   ├── trips/                      #   Trip planning application
+│   │   ├── models.py               #     Session, TripPreferences, Itinerary, Message, AgentTask
+│   │   ├── views.py                #     Generate, Refine, Chat, Tasks, VoiceConfig, Places
+│   │   ├── serializers.py          #     DRF request/response validation schemas
+│   │   ├── tasks.py                #     Celery async task running LangGraph agent
+│   │   ├── admin.py                #     Django admin inspection dashboards
+│   │   └── urls.py                 #     Trip endpoint routes
+│   └── accounts/                   #   User authentication application
+│       ├── models.py               #     CustomUser model
+│       └── urls.py                 #     JWT login, register, token refresh
 │
-├── rag/                            # Retrieval-Augmented Generation
-│   ├── data/                       #   Markdown knowledge docs
-│   │   ├── safety_tips.md          #     Travel safety guidelines
-│   │   ├── packing_guides.md       #     Packing checklists by trip type
-│   │   └── budget_tips.md          #     Budget travel strategies
-│   ├── ingest.py                   #   Chunks & embeds docs into ChromaDB
-│   └── store.py                    #   ChromaDB retrieval interface
+├── frontend/                       # Next.js 16 Web Application (App Router)
+│   ├── package.json                #   Frontend dependencies & scripts
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx            #   Landing hero page with feature highlights
+│   │   │   ├── plan/page.tsx       #   Main planning console (Form ➔ Itinerary ➔ Chat)
+│   │   │   ├── layout.tsx          #   Root HTML layout & theme wrapper
+│   │   │   ├── globals.css         #   Glassmorphism CSS design system & tokens
+│   │   │   ├── components/         #   UI Components:
+│   │   │   │   ├── Navbar.tsx      #     Navigation bar with dark/light mode toggle
+│   │   │   │   ├── ItineraryMap.tsx#     Leaflet.js map with color-coded day markers
+│   │   │   │   ├── BudgetTracker.tsx#    SVG category donut chart & cost analytics
+│   │   │   │   ├── PhotoPreview.tsx#     Unsplash destination gallery & lightbox
+│   │   │   │   ├── PdfExport.tsx   #     Client-side formatted A4 PDF exporter
+│   │   │   │   ├── VoiceChatPanel.tsx#   Conversational voice interface panel
+│   │   │   │   ├── VoiceInput.tsx  #     Microphone recording button & speech recognition
+│   │   │   │   ├── VoicePlayer.tsx #     TTS audio playback with play/pause/rate controls
+│   │   │   │   └── VoiceSettings.tsx#    Voice selection, pitch, rate, language dialog
+│   │   │   └── hooks/              #   Custom React Hooks:
+│   │   │       ├── useVoice.ts     #     SpeechRecognition lifecycle & transcription
+│   │   │       ├── useTTS.ts       #     SpeechSynthesis speech audio synthesizer
+│   │   │       └── useVoiceSettings.ts#  User voice preferences persistence
+│   │   └── types/
+│   │       └── speech.d.ts         #   TypeScript declarations for Web Speech API
 │
-├── frontend/                       # Next.js web application
-│   └── src/app/
-│       ├── page.tsx                #   Landing page with features & hero
-│       ├── plan/page.tsx           #   Preference form → itinerary view → chat
-│       ├── components/Navbar.tsx   #   Navigation bar (dark/light toggle)
-│       ├── globals.css             #   Glassmorphism design system
-│       └── layout.tsx              #   Root layout with metadata
+├── rag/                            # Retrieval-Augmented Generation Layer
+│   ├── data/                       #   Curated Markdown guides
+│   │   ├── safety_tips.md          #     Emergency guidelines, scams, local advice
+│   │   ├── packing_guides.md       #     Checklists by climate and duration
+│   │   └── budget_tips.md          #     Money-saving, transport hacks, dining tips
+│   ├── ingest.py                   #   Document loader, splitter, and vector embedder
+│   └── store.py                    #   Persistent ChromaDB vector store interface
 │
-├── utils/
-│   └── travel_agent.py             # Legacy Streamlit agent (v1 reference)
+├── tools/                          # Agent Tools (LangChain @tool definitions)
+│   ├── weather.py                  #   Open-Meteo live weather forecasts
+│   ├── places.py                   #   Overpass / OpenStreetMap attraction discovery
+│   ├── destination.py              #   REST Countries country intelligence
+│   ├── currency.py                 #   ExchangeRate-API live conversions
+│   ├── knowledge.py                #   ChromaDB RAG semantic search
+│   ├── web_search.py               #   DuckDuckGo search fallback
+│   ├── flights.py                  #   (Optional) SerpApi / Google Flights
+│   └── hotels.py                   #   (Optional) Amadeus hotel accommodation
 │
-├── main.py                         # FastAPI server — /api/generate, /refine, /chat
-├── app.py                          # Legacy Streamlit app (v1)
-├── test_agent.py                   # Agent integration tests
-├── test_api.py                     # API endpoint tests
-├── requirements.txt                # Python dependencies
-├── .env.example                    # Environment variable template
-└── DOCUMENTATION.md                # Detailed prompt & output documentation
+├── utils/                          # Supporting utilities & legacy reference
+├── Dockerfile.backend              # Production container for Django & Celery
+├── Dockerfile.frontend             # Production container for Next.js
+├── docker-compose.yml              # Multi-container orchestration (DB, Redis, Worker, Web)
+├── requirements.txt                # Python backend dependencies
+└── README.md                       # Complete project documentation
 ```
 
 ---
 
-## 🔧 API Reference
+## 🤖 How the Agent Works (ReAct Loop)
 
-### `POST /api/generate`
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Frontend as Next.js Frontend
+    participant API as Django REST API
+    participant Agent as LangGraph Agent
+    participant Tools as Live Tools / RAG
+    participant LLM as Google Gemini
 
-Generate a new itinerary from travel preferences.
+    User->>Frontend: Submits Destination & Preferences
+    Frontend->>API: POST /api/generate
+    API-->>Frontend: 202 Accepted {task_id, session_id}
+    API->>Agent: Dispatches Task (Celery)
+    
+    loop ReAct Loop
+        Agent->>LLM: Prompt + Conversation State
+        LLM-->>Agent: Action: Call Tool (e.g. weather_lookup, places_search)
+        Agent->>Tools: Execute Tool Request
+        Tools-->>Agent: Live Observation Data
+    end
 
-**Request Body:**
+    Agent->>LLM: Synthesize Comprehensive Itinerary
+    LLM-->>Agent: Final Structured Markdown Plan
+    Agent->>API: Persist Itinerary & Mark Task Completed
+
+    loop Polling
+        Frontend->>API: GET /api/tasks/{task_id}/
+        API-->>Frontend: {status: "completed", itinerary: "..."}
+    end
+
+    Frontend-->>User: Renders Itinerary, Map Markers & Budget Chart
+```
+
+### The ReAct Pattern
+- **Reason**: The agent evaluates what information is still missing to build an ideal schedule (e.g., "I need the forecast for Kyoto between Oct 10-15 and top vegetarian ramen spots").
+- **Act**: Executes relevant LangChain tools (`weather_lookup`, `places_search`, `currency_convert`).
+- **Observe**: Analyzes tool outputs (e.g., "Rain is forecast on Day 2; I will schedule indoor museums instead of bamboo grove hikes").
+- **Synthesize**: Combines all live facts into a structured, chronologically sequenced trip plan.
+
+---
+
+## 🎙️ Voice Interaction (STT & TTS)
+
+TriPi features built-in voice assistance powered by the **Web Speech API**:
+
+1. **Speech-to-Text (Voice Input)**:
+   - Click the microphone button in the chat panel to speak your questions or refinement prompts (e.g., *"Can you swap day 3 dinner with an outdoor food market?"*).
+   - Real-time speech recognition displays live transcription before sending.
+2. **Text-to-Speech (Voice Playback)**:
+   - Listen to the agent read out the full itinerary or chat responses aloud.
+   - Includes controls for play, pause, resume, stop, and playback speed adjustments.
+3. **Multilingual & Accent Support**:
+   - Customizable voice settings for **English (US, UK, India)**, **Spanish**, **French**, **German**, **Japanese**, and **Hindi**.
+
+---
+
+## 🔧 REST API Reference
+
+### 1. `POST /api/generate`
+Dispatches an asynchronous trip generation task.
+
+**Request:**
 ```json
 {
   "destination": "Tokyo",
-  "origin": "New York",
+  "origin": "San Francisco",
   "duration": 5,
-  "start_date": "2026-10-01",
-  "end_date": "2026-10-06",
-  "budget": "$3000",
-  "purpose": "Cultural",
-  "interests": ["Food & Dining", "History & Culture"],
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-06",
+  "budget": "$3500",
+  "purpose": "Leisure & Culture",
+  "interests": ["Food & Dining", "Historic Temples", "Anime & Tech"],
   "dietary_preferences": ["Vegetarian"],
-  "accommodation_type": "Mid-range",
+  "accommodation_type": "Boutique Hotel",
+  "walking_tolerance": "High",
   "hidden_gems_preference": true
 }
 ```
-
-**Response:**
+**Response (202 Accepted):**
 ```json
 {
-  "session_id": "uuid-string",
-  "itinerary": "# Your 5-Day Tokyo Itinerary\n\n## Day 1: Arrival & Asakusa...",
-  "tool_calls": ["weather_lookup", "destination_info", "currency_convert", "places_search"]
+  "session_id": "7b36f014-9964-4e78-98e8-6e542d8cae29",
+  "task_id": "d8e3ab42-4f81-432b-8a19-9436ea3a58e3",
+  "status": "pending"
 }
 ```
-
-### `POST /api/refine`
-
-Refine an existing itinerary using conversational memory.
-
-```json
-{
-  "session_id": "uuid-from-generate",
-  "feedback": "Replace day 3 with a food tour and add more ramen spots"
-}
-```
-
-### `POST /api/chat`
-
-Free-form conversation with the travel agent.
-
-```json
-{
-  "session_id": "uuid-from-generate",
-  "message": "What's the best way to get from Shibuya to Asakusa?"
-}
-```
-
-### `GET /health`
-
-Health check — returns `{"status": "ok", "agent": "TriPi v2.0"}`.
 
 ---
 
-## 🧪 Testing
+### 2. `GET /api/tasks/{task_id}/`
+Polls the execution status of an agent run.
+
+**Response (In Progress):**
+```json
+{
+  "task_id": "d8e3ab42-4f81-432b-8a19-9436ea3a58e3",
+  "status": "running"
+}
+```
+
+**Response (Completed):**
+```json
+{
+  "task_id": "d8e3ab42-4f81-432b-8a19-9436ea3a58e3",
+  "status": "completed",
+  "result": {
+    "itinerary": "# 5-Day Tokyo Adventure\n\n## Day 1: Arrival & Shibuya...",
+    "tool_calls": ["weather_lookup", "destination_info", "places_search", "currency_convert"]
+  }
+}
+```
+
+---
+
+### 3. `POST /api/chat`
+Conversational follow-up and refinement using LangGraph thread memory.
+
+**Request:**
+```json
+{
+  "session_id": "7b36f014-9964-4e78-98e8-6e542d8cae29",
+  "message": "Which subway pass should I buy at Haneda airport for this trip?"
+}
+```
+
+---
+
+### 4. `POST /api/extract-places`
+Extracts structured locations (names, categories, latitude/longitude coordinates) from markdown itineraries to render Leaflet map pins.
+
+---
+
+### 5. `GET /api/voice-config`
+Returns available speech-to-text and text-to-speech configurations, language codes, and active voice engines.
+
+---
+
+### 6. `GET /health`
+Liveness check probe.
+```json
+{
+  "status": "ok",
+  "agent": "TriPi v2.0 (Django)"
+}
+```
+
+---
+
+## ⚙️ Environment Variables
+
+Configure these keys in your `.env` file at the root of the project:
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `GOOGLE_API_KEY` | **Yes** | — | Google Gemini API key used by the LLM & RAG embeddings. |
+| `GEMINI_MODEL` | No | `gemini-3.8-flash` | Gemini model name (e.g. `gemini-3.8-flash`, `gemini-2.5-flash`). |
+| `DJANGO_SECRET_KEY` | No | Auto-generated dev key | Django cryptography secret key. |
+| `DJANGO_DEBUG` | No | `True` | Enables Django debug mode for local development. |
+| `USE_POSTGRES` | No | `False` | When `True`, connects to Postgres; otherwise uses SQLite. |
+| `POSTGRES_DB` | No | `tripi` | PostgreSQL database name. |
+| `POSTGRES_USER` | No | `tripi` | PostgreSQL username. |
+| `POSTGRES_PASSWORD` | No | `tripi_dev` | PostgreSQL user password. |
+| `POSTGRES_HOST` | No | `localhost` | PostgreSQL host. |
+| `USE_REDIS` | No | `False` | When `True`, connects to Redis; otherwise runs Celery in eager memory. |
+| `REDIS_URL` | No | `redis://localhost:6379/0` | Redis broker and results connection string. |
+| `SERPAPI_API_KEY` | No | — | Optional: unlocks real Google Flights search schedules & fares. |
+| `AMADEUS_API_KEY` | No | — | Optional: unlocks live hotel accommodation discovery. |
+| `AMADEUS_API_SECRET` | No | — | Optional: Amadeus API authentication secret. |
+| `UNSPLASH_ACCESS_KEY`| No | — | Optional: fetches destination photo galleries from Unsplash. |
+| `NEXT_PUBLIC_API_URL`| No | `http://localhost:8000` | Backend API base URL consumed by Next.js frontend. |
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+Run backend automated tests using pytest:
 
 ```bash
-# Run agent integration tests
-python test_agent.py
+# Activate your virtual environment first
+venv\Scripts\activate      # Windows
+source venv/bin/activate   # macOS / Linux
 
-# Run API endpoint tests
-python test_api.py
+# Run test suite
+pytest
+
+# Run Django unit tests directly
+python backend/manage.py test backend/trips
 ```
 
 ---
 
-## 🔄 How the Agent Works
+## ❓ Troubleshooting & FAQ
 
-```mermaid
-graph TD
-    A[User Submits Preferences] --> B[FastAPI receives request]
-    B --> C[LangGraph ReAct Agent initialized]
-    C --> D{Agent Reasoning Loop}
-    D --> E[🌤️ weather_lookup]
-    D --> F[🌍 destination_info]
-    D --> G[💰 currency_convert]
-    D --> H[📍 places_search]
-    D --> I[🔍 web_search]
-    D --> J[📚 knowledge_search]
-    D --> K[✈️ flight_search]
-    D --> L[🏨 hotel_search]
-    E --> D
-    F --> D
-    G --> D
-    H --> D
-    I --> D
-    J --> D
-    K --> D
-    L --> D
-    D --> M[All data gathered — synthesize itinerary]
-    M --> N[📋 Day-by-day itinerary returned to frontend]
-    N --> O[User reads & chats to refine]
-    O --> |Refinement| D
-```
-
-The agent uses a **ReAct (Reason + Act)** pattern:
-1. **Reason** — The LLM analyzes the user's preferences and decides which tool to call next
-2. **Act** — Executes the chosen tool and receives real data
-3. **Observe** — Incorporates the tool output and reasons about what's still needed
-4. **Repeat** — Loops until all necessary data is gathered
-5. **Synthesize** — Combines everything into a comprehensive, formatted itinerary
-
----
-
-## 🎨 Design System
-
-TriPi features a **"Hyper-Spectral" glassmorphism design** with:
-
-- 🌗 **Dark / Light theme toggle** with smooth CSS transitions
-- 🪟 **Frosted glass cards** using `backdrop-filter: blur()` and semi-transparent backgrounds
-- ✨ **Micro-animations** via Framer Motion (fade-ups, staggered reveals, hover effects)
-- 📱 **Fully responsive** — optimized for desktop, tablet, and mobile
-- 🎨 **CSS custom properties** — centralized color palette, spacing, and typography tokens
-
----
-
-## 🐳 Docker Deployment
-
-Deploy both frontend and backend with a single command:
-
+<details>
+<summary><b>1. "No module named django" or "No module named uvicorn"</b></summary>
+Ensure your virtual environment is activated and dependencies are installed:
 ```bash
-# Build and start both services
-docker-compose up --build -d
-
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose down
+venv\Scripts\activate          # Windows
+pip install -r requirements.txt
 ```
+*Note: TriPi now uses Django (`python backend/manage.py runserver 8000`), so `uvicorn` is no longer used.*
+</details>
 
-> 🟢 Frontend: **http://localhost:3000** · Backend: **http://localhost:8000**
+<details>
+<summary><b>2. "404 NOT_FOUND models/embedding-001" during RAG ingestion</b></summary>
+The legacy Gemini embedding model `embedding-001` has been updated in `rag/store.py` to `models/gemini-embedding-001`. Run:
+```bash
+python -m rag.ingest
+```
+</details>
 
-### Deploy to Cloud
+<details>
+<summary><b>3. Do I need PostgreSQL or Redis to run the project locally?</b></summary>
+**No.** TriPi includes automatic dev fallbacks. When `USE_POSTGRES` and `USE_REDIS` are not set to `true`, TriPi runs seamlessly with local **SQLite** and **in-memory Celery**, making local testing fast and zero-friction.
+</details>
 
-| Platform | Backend | Frontend |
-|---|---|---|
-| **Railway** | Deploy from `Dockerfile.backend` | Deploy from `Dockerfile.frontend` |
-| **Render** | Web Service → Python | Static Site → Next.js |
-| **Vercel** | ❌ (use Railway/Render) | `cd frontend && vercel` |
-| **AWS** | ECS / App Runner | Amplify / S3 + CloudFront |
+<details>
+<summary><b>4. Port 8000 or Port 3000 is already in use</b></summary>
+You can specify alternate ports:
+```bash
+# Backend on port 8001
+python backend/manage.py runserver 8001
 
-**Environment variables** must be set on your cloud provider:
-- `GOOGLE_API_KEY` (required)
-- `NEXT_PUBLIC_API_URL` (set to your deployed backend URL)
-- `UNSPLASH_ACCESS_KEY` (optional)
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!
-
-1. **Fork** the repository
-2. **Create** your feature branch — `git checkout -b feature/amazing-feature`
-3. **Commit** your changes — `git commit -m 'Add amazing feature'`
-4. **Push** to the branch — `git push origin feature/amazing-feature`
-5. **Open** a Pull Request
+# Frontend on port 3001
+cd frontend && npm run dev -- -p 3001
+```
+*(If you change the backend port, remember to set `NEXT_PUBLIC_API_URL=http://localhost:8001` in your frontend environment).*
+</details>
 
 ---
 
@@ -461,9 +571,7 @@ Contributions, issues, and feature requests are welcome!
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
----
-
 <p align="center">
   Built with ❤️ by <a href="https://github.com/Shubhammm24">Shubham</a><br/>
-  <sub>Powered by LangGraph · Google Gemini · FastAPI · Next.js</sub>
+  <sub>Powered by LangGraph · Google Gemini · Django REST Framework · Next.js</sub>
 </p>

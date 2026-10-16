@@ -211,8 +211,9 @@ def run_agent_task(self, task_id: str, session_id: str, prompt: str, thread_id: 
                 task_id, traceback.format_exc(),
             )
 
-        # Let Celery retry once on failure
-        raise self.retry(exc=exc, countdown=5)
+        # Let Celery retry once on failure when running via real worker
+        if not getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            raise self.retry(exc=exc, countdown=5)
 
 
 @shared_task
